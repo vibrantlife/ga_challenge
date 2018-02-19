@@ -20,25 +20,31 @@ app.get('/films/:id/recommendations', getFilmRecommendations);
 
 
 // SQL
-let sqlJoin = "SELECT films.id id, films.title title, films.release_date release_date, genres.name name from films inner join genres on genres.id = films.genre_id WHERE release_date BETWEEN datetime('now', '-15 years') AND datetime('now', 'localtime' )";
-
 
 // ROUTE HANDLER
 function getFilmRecommendations(req, res) {
-  // res.status(500).send('You are the best');
-	db.serialize(function() {
-		
-		
-	});
+	// db.serialize(function() {		
+	// });
+	let paramsId = req.params.id;
+	let genre = 'SELECT genre_id from films where id = ' + paramsId;
+	// console.log(genre);
 
-	db.all(sqlJoin, [], (err, rows) => {
-		if (err){
-			console.log(err.message);
-		}
-		let hash = {};
-		hash['recommendations'] = rows;
-		res.json(hash);
-	})
+	db.all(genre, [], (err, row) => {
+		let genreId = row[0].genre_id;
+		let sqlJoin = "SELECT films.id id, films.title title, films.release_date release_date, genres.name name from films inner join genres on genres.id = films.genre_id WHERE release_date BETWEEN datetime('now', '-15 years') AND datetime('now', 'localtime') AND genre_id = " + genreId + " Limit 5";
+		
+
+		db.all(sqlJoin, [], (err, rows) => {
+			if (err){
+				console.log(err.message);
+			}
+			let hash = {};
+			hash['recommendations'] = rows;
+			res.json(hash);
+			
+		})
+	} )
+
 
 
 }
