@@ -27,11 +27,11 @@ Build a recommendations API endpoint that retrieves top-rated film recommendatio
 #### Acceptance Criteria
 
 1) Recommended films must have:
-  * The same genre as the parent film
+  * ~~The same genre as the parent film~~
   * A minimum of 5 reviews
   * An average rating greater than 4.0
-  * Been released within 15 years, before or after the parent film
-  * A sort order based on film id (order by film id)
+  * ~~Been released within 15 years, before or after the parent film~~
+  * ~~A sort order based on film id (order by film id) ~~
 
 2) The application should allow developers to:
   * Paginate by offset

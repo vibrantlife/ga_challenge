@@ -1,56 +1,113 @@
 'use strict';
 
 const sqlite3 = require('sqlite3').verbose(),
-	  db = new sqlite3.Database('./db/database.db'),
-      Sequelize = require('sequelize'),
-      request = require('request'),
-      express = require('express'),
-      // filmRoutes = require('routes');      
-      app = express();
+db = new sqlite3.Database('./db/database.db'),
+Sequelize = require('sequelize'),
+request = require('request'),
+express = require('express'),
+axios = require('axios'),      
+app = express();
+
 
 const { PORT=3000, NODE_ENV='development', DB_PATH='./db/database.db' } = process.env;
 
 // START SERVER
 Promise.resolve()
-  .then(() => app.listen(PORT, () => console.log(`App listening on port ${PORT}`)))
-  .catch((err) => { if (NODE_ENV === 'development') console.error(err.stack); });
+.then(() => app.listen(PORT, () => console.log(`App listening on port ${PORT}`)))
+.catch((err) => { if (NODE_ENV === 'development') console.error(err.stack); });
 
 // ROUTES
 app.get('/films/:id/recommendations', getFilmRecommendations);
 
 
-// SQL
+
 
 // ROUTE HANDLER
 function getFilmRecommendations(req, res) {
 	// db.serialize(function() {		
 	// });
+
 	let paramsId = req.params.id;
 	let genre = 'SELECT genre_id from films where id = ' + paramsId;
-	// console.log(genre);
+	let reviewCount = 0;
+	let hash = {};
+	let url = 'http://credentials-api.generalassemb.ly/4576f55f-c427-4cfc-a11c-5bfe914ca6c1?films=';
+	let results = [];
 
-	db.all(genre, [], (err, row) => {
+	// if (err) {return next(err)};
+
+	db.all(genre, [], (err, row) => 
+	{
 		let genreId = row[0].genre_id;
-		let sqlJoin = "SELECT films.id id, films.title title, films.release_date release_date, genres.name name from films inner join genres on genres.id = films.genre_id WHERE release_date BETWEEN datetime('now', '-15 years') AND datetime('now', 'localtime') AND genre_id = " + genreId + " Limit 5";
-		
+		let sqlJoin = "SELECT films.id id, films.title title, films.release_date release_date, genres.name name from films inner join genres on genres.id = films.genre_id WHERE release_date BETWEEN datetime('now', '-15 years') AND datetime('now', 'localtime') AND genre_id = " + genreId + " ORDER BY id ASC";
 
-		db.all(sqlJoin, [], (err, rows) => {
-			if (err){
+		db.all(sqlJoin, [], (err, rows) => 
+		{
+			if (err)
+			{
 				console.log(err.message);
 			}
-			let hash = {};
-			hash['recommendations'] = rows;
-			res.json(hash);
-			
+
+			rows.forEach((row) => 
+			{
+				results.push(url+row.id);
+
+
+			});
+
+			let promise = results.map(url => axios.get(url));
+
+			axios.all(promise)
+			.then(function(res)
+			{
+
+				for (let i = 0; i < res.length; i++)
+				{
+					let avg = 0;
+					let sum = 0;
+					let row = rows[i];
+
+					row['reviews'] = res[i].data[0].reviews.length;
+					// console.log(row)
+
+					let ratings = res[i].data[0].reviews;
+					for (let j = 0; j < ratings.length; j++)
+					{
+						if (ratings[i] != undefined)
+						{
+							sum += parseInt(ratings[i].rating);
+						}
+						else 
+						{
+							rows[i]['averageRating'] = 'No Rating Submitted';
+						}
+					}
+					avg = sum / ratings.length;
+					rows[i]['averageRating'] = avg;
+				}
+			})
+			.then(() => {
+				hash['recommendations'] = rows;
+				res.json(hash);
+			})
+
 		})
-	} )
 
+		
 
+	})
 
 }
-// database 
 
+//404
+app.use(function (req, res, next) {
+	res.status(404).send('Sorry cannot find that');
+})
 
-
+//500
+app.use(function(err, req,res,next) {
+	console.error(err.stack);
+	res.status(500).send('Not available')
+})
 
 module.exports = app;
