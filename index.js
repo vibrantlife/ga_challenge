@@ -42,24 +42,13 @@ function getFilmRecommendations(req, res) {
 
 			db.all(genre, [], (err, row) => 
 			{
-				console.log(row)
 				let genreId = row[0].genre_id;
 				let sqlJoin = "SELECT films.id id, films.title title, films.release_date release_date, genres.name name from films inner join genres on genres.id = films.genre_id WHERE release_date BETWEEN datetime('now', '-15 years') AND datetime('now', 'localtime') AND genre_id = " + genreId + " ORDER BY id ASC";
 
-		// db.get('Select id = ? from films', paramsId, function()
-		// {
-		// 	if (row.length === 0)
-		// 	{
-		// 		res.status(422).send('Id not found in database');
-		// 	}
-		// })
 
 		db.all(sqlJoin, [], (err, rows) => 
 		{
-			// if (err)
-			// {
-			// 	console.log(err.message);
-			// }
+
 
 			rows.forEach((row) => 
 			{
@@ -81,18 +70,16 @@ function getFilmRecommendations(req, res) {
 					let row = rows[i];
 
 					row['reviews'] = res[i].data[0].reviews.length;
-					// console.log(row)
 
 					let ratings = res[i].data[0].reviews;
 					for (let j = 0; j < ratings.length; j++)
 					{
-						if (ratings[i] != undefined)
+						if (ratings[i] != undefined )
 						{
 							sum += parseInt(ratings[i].rating);
-							// console.log(ratings[i].rating)
 							
 						}
-						else 
+						else
 						{
 							rows[i]['averageRating'] = 'No Rating Submitted';
 						}
@@ -101,20 +88,23 @@ function getFilmRecommendations(req, res) {
 					rows[i]['averageRating'] = avg;
 				}
 			})
-			.then(() => {
+			.then(() => 
+			{
+				rows.filter(row => row.reviews >= 5), row.averageRating > 4;
 				hash['recommendations'] = rows;
+				hash['meta'] = {'limit' : 'limit', 'offset': 'offset'};
 				res.json(hash);
 			})
-		
+
 
 		})
 
 	})
 
-}
+		}
 
 
-		})
+	})
 
 }
 
