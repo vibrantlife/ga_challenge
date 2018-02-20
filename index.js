@@ -20,13 +20,10 @@ Promise.resolve()
 app.get('/films/:id/recommendations', getFilmRecommendations);
 
 
-
-
 // ROUTE HANDLER
 function getFilmRecommendations(req, res) {
 	// db.serialize(function() {		
 	// });
-
 	let paramsId = req.params.id;
 	let genre = 'SELECT genre_id from films where id = ' + paramsId;
 	let reviewCount = 0;
@@ -34,19 +31,35 @@ function getFilmRecommendations(req, res) {
 	let url = 'http://credentials-api.generalassemb.ly/4576f55f-c427-4cfc-a11c-5bfe914ca6c1?films=';
 	let results = [];
 
-	// if (err) {return next(err)};
+	db.get('SELECT Id id from films where Id=?',[paramsId],(err,row)=>{
+		if(row === undefined)
+		{
+			res.body = 
+			res.status(422).send({message:'"message" key missing'});
+		}
+		else
+		{
 
-	db.all(genre, [], (err, row) => 
-	{
-		let genreId = row[0].genre_id;
-		let sqlJoin = "SELECT films.id id, films.title title, films.release_date release_date, genres.name name from films inner join genres on genres.id = films.genre_id WHERE release_date BETWEEN datetime('now', '-15 years') AND datetime('now', 'localtime') AND genre_id = " + genreId + " ORDER BY id ASC";
+			db.all(genre, [], (err, row) => 
+			{
+				console.log(row)
+				let genreId = row[0].genre_id;
+				let sqlJoin = "SELECT films.id id, films.title title, films.release_date release_date, genres.name name from films inner join genres on genres.id = films.genre_id WHERE release_date BETWEEN datetime('now', '-15 years') AND datetime('now', 'localtime') AND genre_id = " + genreId + " ORDER BY id ASC";
+
+		// db.get('Select id = ? from films', paramsId, function()
+		// {
+		// 	if (row.length === 0)
+		// 	{
+		// 		res.status(422).send('Id not found in database');
+		// 	}
+		// })
 
 		db.all(sqlJoin, [], (err, rows) => 
 		{
-			if (err)
-			{
-				console.log(err.message);
-			}
+			// if (err)
+			// {
+			// 	console.log(err.message);
+			// }
 
 			rows.forEach((row) => 
 			{
@@ -76,6 +89,8 @@ function getFilmRecommendations(req, res) {
 						if (ratings[i] != undefined)
 						{
 							sum += parseInt(ratings[i].rating);
+							// console.log(ratings[i].rating)
+							
 						}
 						else 
 						{
@@ -90,24 +105,28 @@ function getFilmRecommendations(req, res) {
 				hash['recommendations'] = rows;
 				res.json(hash);
 			})
+		
 
 		})
-
-		
 
 	})
 
 }
 
-//404
-app.use(function (req, res, next) {
-	res.status(404).send('Sorry cannot find that');
-})
 
-//500
-app.use(function(err, req,res,next) {
-	console.error(err.stack);
-	res.status(500).send('Not available')
+		})
+
+}
+
+
+app.use(function(req, res, next) {
+	res.status(404)
+
+	if(req.accepts('json'))
+	{
+		res.send({'message' : 'message not found'});
+		return;
+	}
 })
 
 module.exports = app;
